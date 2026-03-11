@@ -4,6 +4,10 @@ import openai
 
 app = FastAPI()
 
+@app.get("/")
+def root():
+    return {"status": "AI voice bot running"}
+
 class VoiceInput(BaseModel):
     text: str
 
