@@ -1,4 +1,12 @@
 fastapi==0.110.0
 uvicorn==0.27.0
+
+# Azure Communication Services
+azure-communication-callautomation
+azure-communication-identity
+
+# Azure Core SDK
+azure-core
+
 # openai
 # azure-cognitiveservices-speech

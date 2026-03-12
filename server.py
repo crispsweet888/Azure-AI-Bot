@@ -1,8 +1,13 @@
 from fastapi import FastAPI, Request
+from azure.communication.callautomation import CallAutomationClient
+import os
 # from pydantic import BaseModel
 # import openai
 
 app = FastAPI()
+
+connection_string = os.getenv("ACS_CONNECTION_STRING")
+client = CallAutomationClient.from_connection_string(connection_string)
 
 @app.get("/")
 def health():
@@ -16,19 +21,24 @@ async def messages(req: Request):
 
 @app.post("/api/call")
 async def handle_event(req: Request):
+    events = await req.json()
+    event = events[0]
+
+    if event["eventType"] == "Microsoft.Communication.IncomingCall":
+        incoming_call_context = event["data"]["incomingCallContext"]
+
+        client.answer_call(
+            incoming_call_context=incoming_call_context,
+            callback_url="https://jjs-ai-voice-bot-dehnh5dzehcxfdf2.canadaeast-01.azurewebsites.net/api/callback"
+        )
+
+    return {"status": "ok"}
+
+@app.post("/api/callback")
+async def callback(req: Request):
     body = await req.json()
-
-    # Event Grid sends events as a list
-    if isinstance(body, list):
-        event = body[0]
-
-        # Handle Event Grid validation
-        if event.get("eventType") == "Microsoft.EventGrid.SubscriptionValidationEvent":
-            code = event["data"]["validationCode"]
-            return {"validationResponse": code}
-
-    print("Received event:", body)
-    return {"status": "received"}
+    print("call event:", body)
+    return {"status": "ok"}
 
 # class VoiceInput(BaseModel):
 #     text: str
