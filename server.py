@@ -14,6 +14,13 @@ async def messages(req: Request):
     print(body)
     return {"status": "ok"}
 
+@app.post("/api/call")
+async def incoming_call(req: Request):
+    body = await req.json()
+    print("Incoming event:", body)
+
+    return {"status": "received"}
+
 # class VoiceInput(BaseModel):
 #     text: str
 
