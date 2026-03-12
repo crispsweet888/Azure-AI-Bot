@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 # from pydantic import BaseModel
 # import openai
 
@@ -8,11 +8,11 @@ app = FastAPI()
 def health():
     return {"status": "running"}
 
-# @app.post("/api/messages")
-# async def messages(req: Request):
-#     body = await req.json()
-#     print(body)
-#     return {"status": "ok"}
+@app.post("/api/messages")
+async def messages(req: Request):
+    body = await req.json()
+    print(body)
+    return {"status": "ok"}
 
 # class VoiceInput(BaseModel):
 #     text: str
