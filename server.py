@@ -15,10 +15,19 @@ async def messages(req: Request):
     return {"status": "ok"}
 
 @app.post("/api/call")
-async def incoming_call(req: Request):
+async def handle_event(req: Request):
     body = await req.json()
-    print("Incoming event:", body)
 
+    # Event Grid sends events as a list
+    if isinstance(body, list):
+        event = body[0]
+
+        # Handle Event Grid validation
+        if event.get("eventType") == "Microsoft.EventGrid.SubscriptionValidationEvent":
+            code = event["data"]["validationCode"]
+            return {"validationResponse": code}
+
+    print("Received event:", body)
     return {"status": "received"}
 
 # class VoiceInput(BaseModel):
