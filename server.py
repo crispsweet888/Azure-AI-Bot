@@ -5,11 +5,17 @@ import openai
 app = FastAPI()
 
 @app.get("/")
-def root():
-    return {"status": "AI voice bot running"}
+def health():
+    return {"status": "running"}
 
 class VoiceInput(BaseModel):
     text: str
+
+@app.post("/api/messages")
+async def messages(req: Request):
+    body = await req.json()
+    print(body)
+    return {"status": "ok"}
 
 @app.post("/voice-intent")
 async def voice_intent(data: VoiceInput):
