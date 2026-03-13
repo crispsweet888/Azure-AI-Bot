@@ -4,7 +4,7 @@ import os
 # from pydantic import BaseModel
 # import openai
 
-app = FastAPI()
+app = FastAPI() 
 
 connection_string = os.getenv("ACS_CONNECTION_STRING")
 client = CallAutomationClient.from_connection_string(connection_string)
