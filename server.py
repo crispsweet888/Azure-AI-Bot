@@ -1,17 +1,22 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from azure.communication.callautomation import CallAutomationClient
+import requests
 import os
 # from pydantic import BaseModel
 # import openai
 
 app = FastAPI() 
 
+TENANT_ID = os.getenv("BOT_TENANT_ID")
+CLIENT_ID = os.getenv("BOT_APP_ID")
+CLIENT_SECRET = os.getenv("BOT_SECRET")
 connection_string = os.getenv("ACS_CONNECTION_STRING")
 client = CallAutomationClient.from_connection_string(connection_string)
 
 @app.get("/")
 def health():
-    return {"status": "running"}
+    return {"status": "voice bot running"}
 
 @app.post("/api/messages")
 async def messages(req: Request):
@@ -19,48 +24,56 @@ async def messages(req: Request):
     print(body)
     return {"status": "ok"}
 
-@app.post("/api/call")
-async def handle_event(req: Request):
-    events = await req.json()
-    event = events[0]
+GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
-    if event["eventType"] == "Microsoft.Communication.IncomingCall":
-        incoming_call_context = event["data"]["incomingCallContext"]
 
-        client.answer_call(
-            incoming_call_context=incoming_call_context,
-            callback_url="https://jjs-ai-voice-bot-dehnh5dzehcxfdf2.canadaeast-01.azurewebsites.net/api/callback"
-        )
+def get_access_token():
+    url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
 
-    return {"status": "ok"}
+    payload = {
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "grant_type": "client_credentials",
+        "scope": "https://graph.microsoft.com/.default"
+    }
 
-@app.post("/api/callback")
-async def callback(req: Request):
-    body = await req.json()
-    print("call event:", body)
-    return {"status": "ok"}
+    response = requests.post(url, data=payload)
+    response.raise_for_status()
+    return response.json()["access_token"]
 
-# class VoiceInput(BaseModel):
-#     text: str
 
-# @app.post("/voice-intent")
-# async def voice_intent(data: VoiceInput):
+def answer_call(call_id, token):
+    url = f"{GRAPH_BASE}/communications/calls/{call_id}/answer"
 
-#     prompt = f"""
-#     Classify the request.
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
-#     Request: {data.text}
+    payload = {
+        "callbackUri": os.getenv("CALLBACK_URI")
+    }
 
-#     Categories:
-#     - customer_service
-#     - technical_support
-#     - billing
-#     - general_question
-#     """
+    requests.post(url, json=payload, headers=headers)
 
-#     response = openai.ChatCompletion.create(
-#         model="gpt-4",
-#         messages=[{"role":"user","content":prompt}]
-#     )
 
-#     return {"intent": response["choices"][0]["message"]["content"]}
+@app.post("/api/calls")
+async def calls_webhook(request: Request):
+    data = await request.json()
+
+    print("Incoming webhook:", data)
+
+    token = get_access_token()
+
+    if "value" in data:
+        for event in data["value"]:
+            resource = event.get("resource", "")
+            event_type = event.get("changeType", "")
+
+            if event_type == "created" and "communications/calls" in resource:
+                call_id = resource.split("/")[-1]
+                print("Incoming call detected:", call_id)
+
+                answer_call(call_id, token)
+
+    return JSONResponse({"status": "ok"})
